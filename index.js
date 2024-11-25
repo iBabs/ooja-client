@@ -22,9 +22,9 @@ app.use('/api/v1/products', productRoute)
 
 
 
+const PORT =7788
 
-
-app.listen(7788, ()=>{
+app.listen(PORT, ()=>{
     console.log('Server is running on port 7788');
 })
 
