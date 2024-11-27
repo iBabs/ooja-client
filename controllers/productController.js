@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import cloudinary from "../config/cloudinary.js";
 import Product from "../models/productModel.js";
 
@@ -14,7 +15,7 @@ export const getProduct = async (req, res) => {
     const { _id } = req.params;
     try {
         const product = await Product.findById(_id);
-        res.status(200).json(product);
+        res.status(200).json({ product });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -63,12 +64,26 @@ export const updateProduct = async (req, res) => {
     const { _id } = req.params;
     const { name, description, price, category } = req.body;
     const image = req.file.path;
+
+
+
+
     try {
+        if (!mongoose.Types.ObjectId.isValid(_id)) {
+            return res.status(400).json({ error: "Invalid product id" })
+        }
+
+
         const product = await Product.findById(_id);
+        if (product.owner.toString() !== req.user._id.toString()) {
+            return res.status(400).json({ error: "You are not the owner of this product" })
+        }
+
+
         if (req.file) {
 
             await cloudinary.uploader.destroy(product.imageID);
-            
+
             const img = await cloudinary.uploader.upload(image);
 
             const updatedProduct = await Product.findByIdAndUpdate(_id, {
@@ -99,5 +114,30 @@ export const updateProduct = async (req, res) => {
     }
 }
 
+export const deleteProduct = async (req, res) => {
+    const { _id } = req.params
 
+    if (!mongoose.Types.ObjectId.isValid(_id)) {
+        return res.status(400).json({ error: "Invalid product id" })
+    }
+    try {
+
+        const prodOwner = await Product.findById(_id)
+        // console.log(prodOwner.owner.toString(), req.user._id.toString())
+
+        if (prodOwner.owner.toString() !== req.user._id.toString()) {
+            return res.status(400).json({ error: "You are not the owner of this product" })
+        }
+
+        const product = await Product.findByIdAndDelete(_id);
+        if (!product) {
+            return res.status(400).json({ error: "Product not found" })
+        }
+        await cloudinary.uploader.destroy(product.imageID);
+        res.status(200).json({ message: "Product deleted successfully" })
+
+    } catch (error) {
+        res.status(400).json({ error: error.message })
+    }
+}
 
